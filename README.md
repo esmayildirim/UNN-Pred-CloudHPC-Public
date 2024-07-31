@@ -19,5 +19,7 @@ Contains programs to visualize the data collected in the Data folder
 
 ## Project Team
 Esma Yildirim, eyildirim@qcc.cuny.edu
-Mohab Hussein, 
+
+Mohab Hussein,
+
 Mikhail Titov, mtitov@bnl.gov
