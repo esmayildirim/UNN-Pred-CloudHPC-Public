@@ -8,7 +8,7 @@ The main program is task_submitter.py and it is used to run workloads using Radi
 
 ## Data
 
-workloads and system_load files contain time series data about the tasks/jobs that belong to a workload and the system utilization of the allocated nodes the workload applications had been running. 
+workloads and system_load files contain time series data about the tasks/jobs that belong to a workload and the system utilization of the allocated nodes the workload applications had been running. Due to the large size of the dataset, it is available upon request. 
 
 ## Model
 Using the data in the data folder, we have three models to predict runtime, cpu utilization and gpu utilization
@@ -17,3 +17,7 @@ Using the data in the data folder, we have three models to predict runtime, cpu 
 
 Contains programs to visualize the data collected in the Data folder
 
+## Project Team
+Esma Yildirim, eyildirim@qcc.cuny.edu
+Mohab Hussein, 
+Mikhail Titov, mtitov@bnl.gov
