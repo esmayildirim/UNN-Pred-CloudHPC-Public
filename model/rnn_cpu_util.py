@@ -5,11 +5,15 @@ import numpy as np
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from math import sqrt
-# compare scaling methods for mlp inputs on regression problem
 from sklearn.datasets import make_regression
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from keras.layers import Dense
+from keras.layers import SimpleRNN
+from keras.layers import AveragePooling1D
+from keras.layers import MaxPooling1D
+from keras.layers import Conv1D
+from keras.layers import Flatten
 from keras.models import Sequential
 from keras.optimizers import SGD
 from keras.optimizers import Adam
@@ -21,11 +25,10 @@ from scipy.stats import chi2_contingency
 import scipy.stats as st
 import pandas as pd
 from keras.models import model_from_json
-
 def correlation(X, y):
     print("PR\tSR\tKT")
     for i in range(X.shape[1]):
-        
+        #print("X col "+str(i)+" max - min ", np.max(X[:,i]),np.min(X[:,i]))
         pr = st.pearsonr(X[:,i], y[:,0])[0] #correlation
         sr = st.spearmanr(X[:,i], y[:,0])[0] # spearman r
         kt = st.kendalltau(X[:,i], y[:,0])[0]
@@ -36,6 +39,7 @@ def correlation(X, y):
         plt.show()
     print("Y max - min ", np.max(y[:,0]),np.min(y[:,0]))
 # prepare dataset with input and output scalers, can be none
+
 def scale_fit(y):
     min = np.min(y[:,0])
     max = np.max(y[:,0])
@@ -51,7 +55,7 @@ def scale_inv_transform(y, min,max):
         y[i][0] = (y[i][0] * (max-min)) + min
     return y
         
-# split dataset into training and testing and normalize it
+# split dataset into training and testing and normalize
 def get_dataset(input_scaler, scale_output, X, y):
     
     correlation(X, y)
@@ -77,34 +81,21 @@ def get_dataset(input_scaler, scale_output, X, y):
 # fit and evaluate model on test set
 def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
     # define model
-    model = Sequential()
-    model.add(Dense(200, input_dim=trainX.shape[1], activation='relu', kernel_initializer='he_uniform'))
-    model.add(Dense(200, activation='relu', kernel_initializer='he_uniform'))
-    model.add(Dense(200, activation='relu', kernel_initializer='he_uniform'))
+    trainX = trainX.reshape(trainX.shape[0], trainX.shape[1], 1)
 
+    model = Sequential()
+    model.add(SimpleRNN(50, input_shape=(trainX.shape[1],trainX.shape[2]), activation='relu', kernel_initializer='he_uniform'))
+    model.add(Dense(25, activation='relu', kernel_initializer='he_uniform'))
     model.add(Dense(1, activation='linear'))
     # compile model
     model.compile(loss='mse', optimizer=Adam(learning_rate=0.01))
-
-    # fit model
     history = model.fit(trainX, trainy, epochs=100, verbose=0, validation_split=0.2)
-    # evaluate the model
-    '''
-    plt.plot(history.history['loss'], label='MSE (training data)')
-    plt.plot(history.history['val_loss'], label='MSE (validation data)')
-    plt.title('MSE on runtime on second system')
-    plt.ylabel('MSE value')
-    plt.xlabel('No. epoch')
-    plt.legend(loc="upper left")
-    plt.show()
-    '''
-    #test_mse = model.evaluate(testX, testy, verbose=0)
     percentage = 0.0
     mae = 0.0
     mse = 0.0
     count = 0
     
-    
+    testX = testX.reshape(testX.shape[0], testX.shape[1], 1)
     y_hat = model.predict(testX)
     testy = scale_inv_transform(testy, train_min, train_max)
     y_hat = scale_inv_transform(y_hat, train_min, train_max)
@@ -220,6 +211,7 @@ def read_workloads_data(file_path, file_path2, file_path3, file_path4,total_cpus
             #print("Average system load during task run:", end=" ")
             ##print (["%0.2f" % i for i in system_utils])
             
+            #second system tasks
             # for every same task on the second system calculate 5 minute before system utils and return them
             for j in range(len(second_workloads)):
                 #print(len(second_workloads), " workload, ", len(second_workloads[i]["tasklist"]), " tasks.")
@@ -286,96 +278,36 @@ def read_workloads_data(file_path, file_path2, file_path3, file_path4,total_cpus
     print(output_list)
     return input_list, output_list
 
-def save_model(model, name):
-    model_json = model.to_json()
-    with open("best_"+name+"_model_arch.json", "w") as json_file:
-        json_file.write(model_json)
-    model.save_weights("best_"+name+"_model.weights.h5")
-# load the parameters of the best model and evaluate 
-def display_model(model_arch, model_weights, testX, testy, train_min, train_max):
-        
-    f = open(model_arch)
-    items = json.load(f)
-    model = model_from_json(json.dumps(items))
-    model.compile(optimizer=Adam(learning_rate=0.01), loss='mse', metrics = ['mse'])
-    model.load_weights(model_weights)
-    
-    y_hat = model.predict(testX)
-    testy = scale_inv_transform(testy, train_min, train_max)
-    y_hat = scale_inv_transform(y_hat, train_min, train_max)
-    mae = mse = percentage = 0
-    count = 0
-    for i in range(y_hat.shape[0]):
-        mae += abs(y_hat[i][0] - testy[i][0])
-        mse += abs(y_hat[i][0] - testy[i][0])**2
-        #if testy[i][0] == 0:
-        #    continue
-        #percentage += abs(y_hat[i][0] - testy[i][0])/ testy[i][0]
-        count += 1
-    mae /= count
-    mse /= count
-    #percentage /= count
-    #percentage *= 100
-    r2 = r2_score(testy[:,0],y_hat[:,0])
-    #print("Best MAPE:", percentage)
-    print("Best MSE:", mse)
-    print("Best MAE:", mae)
-    print("Best R2:", r2)
-    print("Best RMSE:", sqrt(mse), "\n")
-    plt.xlim(-5,55)
-    plt.ylim(-5,55)
-    plt.xlabel("Actual CPU Utilization (%)")
-    plt.ylabel("Predicted CPU Utilization (%)")
-    plt.title("CPU Utilization - MLP Model - Polaris->IC2")
-    plt.scatter(testy[:,0],y_hat[:,0], facecolors='none', edgecolors='b')
-    plt.plot([0, np.max(testy[:,0])], [0, np.max(testy[:,0])], color = 'red', linewidth = 1)
-    #plt.show()
-    plt.savefig(model_arch[:-5]+".png", dpi= 300)
-    plt.close()
 
 if __name__ == "__main__":
     RUNS = 10
-    #BEST RESULTS
-    '''
-    X, y = read_workloads_data("../data/ic2/workloads_small.json",
-                        "../data/ic2/system_load_small.json",
-                        "../data/aws/workloads_small_5seeds_clean.json",
-                        "../data/aws/system_load_small_5seeds.json",
-                        96, 8, 128, 0)
+    
     '''
     #MIXED RESULTS
+    X, y = read_workloads_data("../data/all_workloads_ic2.json",
+                        "../data/all_system_loads_ic2.json",
+                        "../data/all_workloads_aws.json",
+                        "../data/all_system_loads_aws.json",
+                        96, 8, 128, 0)
+    
+    X, y = read_workloads_data("../data/all_workloads_polaris.json",
+                        "../data/all_system_loads_polaris.json",
+                        "../data/all_workloads_aws.json",
+                        "../data/all_system_loads_aws.json",
+                        320, 40, 128, 0)
+    '''
     X, y = read_workloads_data("../data/all_workloads_polaris.json",
                         "../data/all_system_loads_polaris.json",
                         "../data/all_workloads_ic2.json",
                         "../data/all_system_loads_ic2.json",
                         320, 40, 96, 8)
     
-    #calculate the best out of 10 runs and save the model and weights
+    #calculate average of 10 runs
     
-    best_mse = float('inf')
-    best_mae = float('inf')
-    #best_mape = float('inf')
-    best_r2 = float('-inf')
     averages = [0.0, 0.0, 0.0, 0.0]
     for i in range(RUNS):
         trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
         model, mae, mse, r2, mape = evaluate_model(trainX, trainy, testX, testy, trainy_min, trainy_max)
-        if mae < best_mae:
-            best_mae = mae
-            best_mae_model = model
-        
-        if mse < best_mse:
-            best_mse = mse
-            best_mse_model = model
-    
-        #if mape < best_mape:
-        #    best_mape = mape
-        #    best_mape_model = model
-        
-        if r2 > best_r2:
-            best_r2 = r2
-            best_r2_model = model
-        
         averages[0] += mae
         averages[1] += mse
         #averages[2] += mape
@@ -388,20 +320,4 @@ if __name__ == "__main__":
     print("AVG_MSE", averages[1])
     #print("AVG_MAPE", averages[2])
     print("AVG_R2", averages[3])
-    
-    save_model(best_mae_model, "mae")
-    save_model(best_mse_model, "mse")
-    #save_model(best_mape_model, "mape")
-    save_model(best_r2_model, "r2")
-    
-    trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mae_model_arch.json", "best_mae_model.weights.h5",testX,testy,trainy_min,trainy_max)
-    trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mse_model_arch.json", "best_mse_model.weights.h5",testX,testy,trainy_min,trainy_max)
-    #trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    #display_model("best_mape_model_arch.json", "best_mape_model_weights.h5",testX,testy,trainy_min,trainy_max)
-    trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_r2_model_arch.json", "best_r2_model.weights.h5",testX,testy,trainy_min,trainy_max)
-
-
     

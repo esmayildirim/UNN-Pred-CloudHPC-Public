@@ -24,7 +24,7 @@ from keras.models import model_from_json
 def correlation(X, y):
     print("PR\tSR\tKT")
     for i in range(X.shape[1]):
-        #print("X col "+str(i)+" max - min ", np.max(X[:,i]),np.min(X[:,i]))
+        
         pr = st.pearsonr(X[:,i], y[:,0])[0] #correlation
         sr = st.spearmanr(X[:,i], y[:,0])[0] # spearman r
         kt = st.kendalltau(X[:,i], y[:,0])[0]
@@ -51,7 +51,7 @@ def scale_inv_transform(y, min,max):
         y[i][0] = (y[i][0] * (max-min)) + min
     return y
         
-
+# split dataset into training and testing and normalize
 def get_dataset(input_scaler, scale_output, X, y):
     
     correlation(X, y)
@@ -74,7 +74,7 @@ def get_dataset(input_scaler, scale_output, X, y):
     
     return trainX, trainy, testX, testy, train_min, train_max
 
-# fit and evaluate mse of model on test set
+# fit and evaluate model on test set
 def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
     # define model
     model = Sequential()
@@ -84,7 +84,7 @@ def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
 
     model.add(Dense(1, activation='linear'))
     # compile model
-    model.compile(loss='mse', optimizer=Adam(lr=0.01))
+    model.compile(loss='mse', optimizer=Adam(learning_rate=0.01))
 
     # fit model
     history = model.fit(trainX, trainy, epochs=100, verbose=0, validation_split=0.2)
@@ -132,7 +132,7 @@ def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
     #plt.show()
     
     return model, mae, mse, r2, percentage
-
+# read dataset files and convert into proper format
 def read_workloads_data(file_path, file_path2, file_path3, file_path4,total_cpus1, total_gpus1, total_cpus2, total_gpus2, util_type = "cpu"):
     input_list = []
     output_list = []
@@ -284,8 +284,8 @@ def save_model(model, name):
     model_json = model.to_json()
     with open("best_"+name+"_model_arch.json", "w") as json_file:
         json_file.write(model_json)
-    model.save_weights("best_"+name+"_model_weights.h5")
-    
+    model.save_weights("best_"+name+"_model.weights.h5")
+# load the parameters of the best model and evaluate
 def display_model(model_arch, model_weights, testX, testy, train_min, train_max):
         
     f = open(model_arch)
@@ -389,13 +389,13 @@ if __name__ == "__main__":
     save_model(best_r2_model, "r2")
     
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mae_model_arch.json", "best_mae_model_weights.h5",testX,testy,trainy_min,trainy_max)
+    display_model("best_mae_model_arch.json", "best_mae_model.weights.h5",testX,testy,trainy_min,trainy_max)
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mse_model_arch.json", "best_mse_model_weights.h5",testX,testy,trainy_min,trainy_max)
+    display_model("best_mse_model_arch.json", "best_mse_model.weights.h5",testX,testy,trainy_min,trainy_max)
     #trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
     #display_model("best_mape_model_arch.json", "best_mape_model_weights.h5",testX,testy,trainy_min,trainy_max)
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_r2_model_arch.json", "best_r2_model_weights.h5",testX,testy,trainy_min,trainy_max)
+    display_model("best_r2_model_arch.json", "best_r2_model.weights.h5",testX,testy,trainy_min,trainy_max)
 
 
     

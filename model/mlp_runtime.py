@@ -5,7 +5,6 @@ import numpy as np
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from math import sqrt
-# compare scaling methods for mlp inputs on regression problem
 from sklearn.datasets import make_regression
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
@@ -24,18 +23,14 @@ from keras.models import model_from_json
 def correlation(X, y):
     print("PR\tSR\tKT")
     for i in range(X.shape[1]):
-        #print("X col "+str(i)+" max - min ", np.max(X[:,i]),np.min(X[:,i]))
         pr = st.pearsonr(X[:,i], y[:,0])[0] #correlation
         sr = st.spearmanr(X[:,i], y[:,0])[0] # spearman r
         kt = st.kendalltau(X[:,i], y[:,0])[0]
         print("%.2f\t%.2f\t%.2f" % (pr, sr, kt))
         
-        #plt.hist(X[:,i])
-        #plt.scatter(X[:,i], y[:,0])
-        #plt.show()
-    print("Y max - min ", np.max(y[:,0]),np.min(y[:,0]))
-# prepare dataset with input and output scalers, can be none
+        print("Y max - min ", np.max(y[:,0]),np.min(y[:,0]))
 
+# prepare dataset with input and output scalers, can be none
 def scale_fit(y):
     min = np.min(y[:,0])
     max = np.max(y[:,0])
@@ -51,7 +46,7 @@ def scale_inv_transform(y, min,max):
         y[i][0] = (y[i][0] * (max-min)) + min
     return y
         
-
+# The data set is split into training and testing datasets and normalized
 def get_dataset(input_scaler, scale_output, X, y):
     
     correlation(X, y)
@@ -74,7 +69,7 @@ def get_dataset(input_scaler, scale_output, X, y):
     
     return trainX, trainy, testX, testy, train_min, train_max
 
-# fit and evaluate mse of model on test set
+# fit and evaluate model on test set
 def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
     # define model
     model = Sequential()
@@ -85,7 +80,7 @@ def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
 
     model.add(Dense(1, activation='linear'))
     # compile model
-    model.compile(loss='mse', optimizer=Adam(lr=0.01))
+    model.compile(loss='mse', optimizer=Adam(learning_rate=0.01))
 
     # fit model
     history = model.fit(trainX, trainy, epochs=100, verbose=0, validation_split=0.2)
@@ -131,7 +126,7 @@ def evaluate_model(trainX, trainy, testX, testy, train_min, train_max):
     #plt.show()
     
     return model, mae, mse, r2, percentage
-
+# data set files are read and converted into proper format
 def read_workloads_data(file_path, file_path2, file_path3, file_path4,total_cpus1, total_gpus1, total_cpus2, total_gpus2):
     input_list = []
     output_list = []
@@ -232,7 +227,6 @@ def read_workloads_data(file_path, file_path2, file_path3, file_path4,total_cpus
             #print("Average system load during task run:", end=" ")
             ##print (["%0.2f" % i for i in system_utils])
             
-            #TODO second system tasks
             # for every same task on the second system calculate 5 minute before system utils and return them
             for j in range(len(second_workloads)):
                 #print(len(second_workloads), " workload, ", len(second_workloads[i]["tasklist"]), " tasks.")
@@ -293,8 +287,8 @@ def save_model(model, name):
     model_json = model.to_json()
     with open("best_"+name+"_model_arch.json", "w") as json_file:
         json_file.write(model_json)
-    model.save_weights("best_"+name+"_model_weights.h5")
-    
+    model.save_weights("best_"+name+"_model.weights.h5")
+# reads parameters of the best model and evaluates the metrics
 def display_model(model_arch, model_weights, testX, testy, train_min, train_max):
         
     f = open(model_arch)
@@ -337,7 +331,7 @@ def display_model(model_arch, model_weights, testX, testy, train_min, train_max)
     plt.close()
 
 if __name__ == "__main__":
-    RUNS = 10 # 20 is a good number
+    RUNS = 10
     #BEST RESULTS
     '''
     X, y = read_workloads_data("../data/ic2/workloads_threaded_new.json",
@@ -404,13 +398,13 @@ if __name__ == "__main__":
     save_model(best_r2_model, "r2")
     
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mae_model_arch.json", "best_mae_model_weights.h5",testX,testy,trainy_min,trainy_max)
+    display_model("best_mae_model_arch.json", "best_mae_model.weights.h5",testX,testy,trainy_min,trainy_max)
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mse_model_arch.json", "best_mse_model_weights.h5",testX,testy,trainy_min,trainy_max) # looks good
+    display_model("best_mse_model_arch.json", "best_mse_model.weights.h5",testX,testy,trainy_min,trainy_max)
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_mape_model_arch.json", "best_mape_model_weights.h5",testX,testy,trainy_min,trainy_max) # looks good
+    display_model("best_mape_model_arch.json", "best_mape_model.weights.h5",testX,testy,trainy_min,trainy_max)
     trainX, trainy, testX, testy, trainy_min, trainy_max = get_dataset(MinMaxScaler(), True, X, y)
-    display_model("best_r2_model_arch.json", "best_r2_model_weights.h5",testX,testy,trainy_min,trainy_max)
+    display_model("best_r2_model_arch.json", "best_r2_model.weights.h5",testX,testy,trainy_min,trainy_max)
     
 
     
