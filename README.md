@@ -14,7 +14,7 @@ https://doi.org/10.5281/zenodo.15545095
 
 
 ## Model
-Using the data in the data folder, we have three MLP models to predict runtime, cpu utilization and gpu utilization. This folder also contains comparison models (CNN, Linear Regression, RNN and LSTM).
+Using the data in the data folder, we have three MLP models to predict runtime, cpu utilization and gpu utilization. This folder also contains comparison models (CNN, Linear Regression, RNN and LSTM). The models are run with Python 3.9.19 version and requirements.txt file in this folder shows the versions of the other Python libraries. 
 
 ## Visualization
 
